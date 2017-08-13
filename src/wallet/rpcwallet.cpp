@@ -1520,6 +1520,135 @@ UniValue listtransactions(const UniValue& params, bool fHelp)
     return ret;
 }
 
+UniValue listtransactions2(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() > 4)
+        throw runtime_error(
+            "listtransactions2 ( \"account\" count from includeWatchonly)\n"
+            "\nReturns up to 'count' most recent transactions skipping the first 'from' transactions for account 'account'.\n"
+            "\nArguments:\n"
+            "1. \"account\"    (string, optional) The account name. If not included, it will list all transactions for all accounts.\n"
+            "                                     If \"\" is set, it will list transactions for the default account.\n"
+            "2. count          (numeric, optional, default=10) The number of transactions to return\n"
+            "3. from           (numeric, optional, default=0) The number of transactions to skip\n"
+            "4. includeWatchonly (bool, optional, default=false) Include transactions to watchonly addresses (see 'importaddress')\n"
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"account\":\"accountname\",       (string) The account name associated with the transaction. \n"
+            "                                                It will be \"\" for the default account.\n"
+            "    \"address\":\"bitcoinaddress\",    (string) The bitcoin address of the transaction. Not present for \n"
+            "                                                move transactions (category = move).\n"
+            "    \"category\":\"send|receive|move\", (string) The transaction category. 'move' is a local (off blockchain)\n"
+           "                                                transaction between accounts, and not associated with an address,\n"
+            "                                                transaction id or block. 'send' and 'receive' transactions are \n"
+            "                                                associated with an address, transaction id and block details\n"
+            "    \"amount\": x.xxx,          (numeric) The amount in btc. This is negative for the 'send' category, and for the\n"
+            "                                         'move' category for moves outbound. It is positive for the 'receive' category,\n"
+            "                                         and for the 'move' category for inbound funds.\n"
+            "    \"vout\" : n,               (numeric) the vout value\n"
+            "    \"fee\": x.xxx,             (numeric) The amount of the fee in btc. This is negative and only available for the \n"
+            "                                         'send' category of transactions.\n"
+            "    \"confirmations\": n,       (numeric) The number of confirmations for the transaction. Available for 'send' and \n"
+            "                                         'receive' category of transactions.\n"
+            "    \"blockhash\": \"hashvalue\", (string) The block hash containing the transaction. Available for 'send' and 'receive'\n"
+            "                                          category of transactions.\n"
+            "    \"blockindex\": n,          (numeric) The block index containing the transaction. Available for 'send' and 'receive'\n"
+            "                                          category of transactions.\n"
+            "    \"txid\": \"transactionid\", (string) The transaction id. Available for 'send' and 'receive' category of transactions.\n"
+            "    \"time\": xxx,              (numeric) The transaction time in seconds since epoch (midnight Jan 1 1970 GMT).\n"
+            "    \"timereceived\": xxx,      (numeric) The time received in seconds since epoch (midnight Jan 1 1970 GMT). Available \n"
+            "                                          for 'send' and 'receive' category of transactions.\n"
+            "    \"comment\": \"...\",       (string) If a comment is associated with the transaction.\n"
+            "    \"otheraccount\": \"accountname\",  (string) For the 'move' category of transactions, the account the funds came \n"
+            "                                          from (for receiving funds, positive amounts), or went to (for sending funds,\n"
+            "                                          negative amounts).\n"
+            "  }\n"
+            "]\n"
+
+            "\nExamples:\n"
+            "\nList the most recent 10 transactions in the systems\n"
+            + HelpExampleCli("listtransactions", "") +
+            "\nList the most recent 10 transactions for the tabby account\n"
+            + HelpExampleCli("listtransactions", "\"tabby\"") +
+            "\nList transactions 100 to 120 from the tabby account\n"
+            + HelpExampleCli("listtransactions", "\"tabby\" 20 100") +
+            "\nAs a json rpc call\n"
+            + HelpExampleRpc("listtransactions", "\"tabby\", 20, 100")
+        );
+
+    string strAccount = "*";
+    if (params.size() > 0)
+        strAccount = params[0].get_str();
+    int nCount = 10;
+    if (params.size() > 1)
+        nCount = params[1].get_int();
+    int nStart = 0;
+    if (params.size() > 2)
+        nStart = params[2].get_int();
+    isminefilter filter = ISMINE_SPENDABLE;
+    if(params.size() > 3)
+        if(params[3].get_bool())
+            filter = filter | ISMINE_WATCH_ONLY;
+
+    if (nCount < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Negative count");
+    if (nStart < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Negative start");
+
+    // TBFIX
+    // Array ret;
+    UniValue ret(UniValue::VARR);
+
+    // TBFIX
+    // CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount);
+    // std::list<CAccountingEntry> acentries;
+    const CWallet::TxItems & txOrdered = pwalletMain->wtxOrdered;
+
+    // iterate backwards until we have nCount items to return:
+    // TBFIX
+    // CWallet::TxItems::iterator it = txOrdered.begin();
+    CWallet::TxItems::const_iterator it = txOrdered.begin();
+    // TBFIX
+    // if(txOrdered.size() > nStart) {
+    if( (int)txOrdered.size() > nStart) {
+        std::advance(it, nStart);
+        for (; it != txOrdered.end(); ++it)
+        {
+            CWalletTx *const pwtx = (*it).second.first;
+            if (pwtx != 0)
+                ListTransactions(*pwtx, strAccount, 0, true, ret, filter);
+            CAccountingEntry *const pacentry = (*it).second.second;
+            if (pacentry != 0)
+                AcentryToJSON(*pacentry, strAccount, ret);
+
+            if ((int)ret.size() >= nCount) break;
+        }
+    }
+
+    // TBFIX
+    // now we make sure to return only the last nCount items (sends-to-self might give us an extra)
+    /*
+    if ((int)ret.size() > nCount) {
+        // Array::iterator last = ret.begin();
+        int foo = ret.begin();
+        std::advance(last, nCount);
+        ret.erase(last, ret.end());
+    }
+    */
+    vector<UniValue> arrTmp = ret.getValues();
+    if ((int)ret.size() > nCount) {
+        vector<UniValue>::iterator last = arrTmp.begin();
+        std::advance(last, nCount);
+        arrTmp.erase(last, arrTmp.end());
+    }
+    ret.clear();
+    ret.setArray();
+    ret.push_backV(arrTmp);
+
+    return ret;
+}
+
 UniValue listaccounts(const UniValue& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
@@ -2493,6 +2622,8 @@ extern UniValue dumpwallet(const UniValue& params, bool fHelp);
 extern UniValue importwallet(const UniValue& params, bool fHelp);
 extern UniValue importprunedfunds(const UniValue& params, bool fHelp);
 extern UniValue removeprunedfunds(const UniValue& params, bool fHelp);
+extern UniValue listtransactions(const UniValue& params, bool fHelp);
+extern UniValue listtransactions2(const UniValue& params, bool fHelp);
 
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           okSafeMode
@@ -2529,6 +2660,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "listreceivedbyaddress",    &listreceivedbyaddress,    false },
     { "wallet",             "listsinceblock",           &listsinceblock,           false },
     { "wallet",             "listtransactions",         &listtransactions,         false },
+    { "wallet",             "listtransactions2",        &listtransactions2,         false },
     { "wallet",             "listunspent",              &listunspent,              false },
     { "wallet",             "lockunspent",              &lockunspent,              true  },
     { "wallet",             "move",                     &movecmd,                  false },

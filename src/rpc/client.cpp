@@ -57,6 +57,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listtransactions", 1 },
     { "listtransactions", 2 },
     { "listtransactions", 3 },
+    { "listtransactions2", 1 },
+    { "listtransactions2", 2 },
+    { "listtransactions2", 3 },
     { "listaccounts", 0 },
     { "listaccounts", 1 },
     { "walletpassphrase", 1 },
@@ -164,4 +167,3 @@ UniValue RPCConvertValues(const std::string &strMethod, const std::vector<std::s
 
     return params;
 }
-
