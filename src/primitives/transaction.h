@@ -201,6 +201,11 @@ struct CMutableTransaction;
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
+
+class CTransaction;
+
+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, uint32_t nHashType, const CAmount &amount, size_t* nHashedOut);
+
 class CTransaction
 {
 private:
@@ -261,6 +266,11 @@ public:
     CAmount GetValueOut() const;
     // GetValueIn() is a method on CCoinsViewCache, because
     // inputs must be known to compute value in.
+
+    uint256 GetNormalizedHash() const
+    {
+      return SignatureHash(CScript(), *this, 0xFFFFFFFFUL, 1, 0, NULL); // SIGHASH_ALL = 1
+    }
 
     // Compute priority, given priority of inputs and (optionally) tx size
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
