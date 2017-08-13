@@ -204,7 +204,7 @@ struct CMutableTransaction;
 
 class CTransaction;
 
-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, uint32_t nHashType, const CAmount &amount, size_t* nHashedOut);
+uint256 SignatureHashLegacy(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, uint32_t nHashType, const CAmount &amount, size_t* nHashedOut);
 
 class CTransaction
 {
@@ -269,7 +269,7 @@ public:
 
     uint256 GetNormalizedHash() const
     {
-      return SignatureHash(CScript(), *this, 0xFFFFFFFFUL, 1, 0, NULL); // SIGHASH_ALL = 1
+      return SignatureHashLegacy(CScript(), *this, 0xFFFFFFFFUL, 1, 0, NULL); // SIGHASH_ALL = 1
     }
 
     // Compute priority, given priority of inputs and (optionally) tx size
