@@ -269,7 +269,7 @@ public:
 
     uint256 GetNormalizedHash() const
     {
-      return SignatureHash(CScript(), *this, 0xFFFFFFFFUL, 1, 0, NULL); // SIGHASH_ALL = 1
+      return SignatureHash(CScript(), *this, 0xFFFFFFFFUL, 65, 0, NULL); // SIGHASH_ALL = 1
     }
 
     // Compute priority, given priority of inputs and (optionally) tx size
