@@ -204,6 +204,27 @@ UniValue getrawtransaction(const UniValue& params, bool fHelp)
     return result;
 }
 
+UniValue getnormalizedtxid(const UniValue& params, bool fHelp)
+{
+    if(fHelp || params.size() != 1)
+        throw runtime_error("getnormalizedtxid [serialized txn]\n");
+
+    // parse hex string from parameter
+    vector<unsigned char> txData(ParseHexV(params[0], "argument"));
+    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
+    CTransaction tx;
+
+    // deserialize binary data stream
+    try {
+        ssData >> tx;
+    } catch (std::exception &e) {
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    }
+
+    uint256 hashNormalized = tx.GetNormalizedHash();
+    return hashNormalized.GetHex();
+}
+
 UniValue gettxoutproof(const UniValue& params, bool fHelp)
 {
     if (fHelp || (params.size() != 1 && params.size() != 2))
@@ -882,7 +903,7 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
             }
         }
 #ifdef ENABLE_WALLET
-        else  
+        else
             SyncWithWallets(tx, NULL);
 #endif
 
