@@ -1993,7 +1993,12 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount &nFeeRet, int& nC
         return false;
 
     if (nChangePosRet != -1)
+    {
         tx.vout.insert(tx.vout.begin() + nChangePosRet, wtx.vout[nChangePosRet]);
+        // we dont have the normal Create/Commit cycle, and dont want to risk reusing change,
+        // so just remove the key from the keypool here.
+        reservekey.KeepKey();
+    }
 
     // Add new txins (keeping original txin scriptSig/order)
     BOOST_FOREACH(const CTxIn& txin, wtx.vin)
@@ -2011,6 +2016,7 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount &nFeeRet, int& nC
             tx.vin.push_back(txin);
     }
 
+    if (tx.nLockTime == 0) tx.nLockTime = wtx.nLockTime;
     return true;
 }
 
@@ -2654,7 +2660,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
         if (!HaveKey(keypool.vchPubKey.GetID()))
             throw runtime_error("ReserveKeyFromKeyPool(): unknown key in key pool");
         assert(keypool.vchPubKey.IsValid());
-        LogPrintf("keypool reserve %d\n", nIndex);
+        LogPrint("db","keypool reserve %d\n", nIndex);
     }
 }
 
@@ -2666,7 +2672,7 @@ void CWallet::KeepKey(int64_t nIndex)
         CWalletDB walletdb(strWalletFile);
         walletdb.ErasePool(nIndex);
     }
-    LogPrintf("keypool keep %d\n", nIndex);
+    LogPrint("db","keypool keep %d\n", nIndex);
 }
 
 void CWallet::ReturnKey(int64_t nIndex)
@@ -2676,7 +2682,7 @@ void CWallet::ReturnKey(int64_t nIndex)
         LOCK(cs_wallet);
         setKeyPool.insert(nIndex);
     }
-    LogPrintf("keypool return %d\n", nIndex);
+    LogPrint("db","keypool return %d\n", nIndex);
 }
 
 bool CWallet::GetKeyFromPool(CPubKey& result)
