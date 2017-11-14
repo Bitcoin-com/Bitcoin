@@ -23,6 +23,7 @@
 #include "util.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
+#include "ui_interface.h"
 
 #include <stdint.h>
 
@@ -157,6 +158,12 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
             coinbaseScript->KeepScript();
         }
     }
+
+    CValidationState state;
+    LOCK(cs_main);
+    FlushStateToDisk(state, FLUSH_STATE_ALWAYS); // we made lots of blocks
+    CBlockIndex *pindexNewTip = chainActive.Tip();
+    uiInterface.NotifyBlockTip(false, pindexNewTip);
     return blockHashes;
 }
 
@@ -847,7 +854,7 @@ UniValue estimatesmartfee(const UniValue& params, bool fHelp)
             "\nResult:\n"
             "{\n"
 #ifdef BITCOIN_CASH
-            "  \"feerate\" : x.x,     (numeric) estimate fee-per-kilobyte (in BCC)\n"
+            "  \"feerate\" : x.x,     (numeric) estimate fee-per-kilobyte (in BCH)\n"
 #else
             "  \"feerate\" : x.x,     (numeric) estimate fee-per-kilobyte (in BTC)\n"
 #endif
