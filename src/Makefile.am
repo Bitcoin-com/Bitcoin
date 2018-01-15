@@ -8,6 +8,21 @@ else
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS)
 AM_CPPFLAGS = $(HARDENED_CPPFLAGS)
 endif
+if ENABLE_GPERF
+AM_CXXFLAGS += -pg
+AM_CPPFLAGS += -pg
+AM_LDFLAGS  += -pg
+endif
+if ENABLE_GPROF
+AM_CXXFLAGS += -pg
+AM_CPPFLAGS += -pg
+AM_LDFLAGS  += -pg
+endif
+if ENABLE_MUTRACE
+AM_CXXFLAGS += -O0 -g -rdynamic
+AM_CPPFLAGS += -O0 -g -rdynamic
+AM_LDFLAGS  += -O0 -g -rdynamic
+endif
 EXTRA_LIBRARIES =
 # libtcmalloc.a
 
@@ -81,6 +96,8 @@ BITCOIN_CORE_H = \
   bitnodes.h \
   bloom.h \
   buip055fork.h \
+  cashaddr.h \
+  cashaddrenc.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -95,6 +112,7 @@ BITCOIN_CORE_H = \
   compat/endian.h \
   compat/sanity.h \
   compressor.h \
+  config.h \
   connmgr.h \
   consensus/consensus.h \
   core_io.h \
@@ -102,6 +120,7 @@ BITCOIN_CORE_H = \
   dosman.h \
   expedited.h \
   fs.h \
+  dstencode.h \
   httprpc.h \
   httpserver.h \
   init.h \
@@ -314,11 +333,15 @@ libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_common_a_SOURCES = \
   amount.cpp \
   base58.cpp \
+  cashaddr.cpp \
+  cashaddrenc.cpp \
   chainparams.cpp \
   coins.cpp \
   compressor.cpp \
+  config.cpp \
   core_read.cpp \
   core_write.cpp \
+  dstencode.cpp \
   key.cpp \
   keystore.cpp \
   netaddress.cpp \
@@ -441,9 +464,9 @@ if GLIBC_BACK_COMPAT
   libbitcoinconsensus_la_SOURCES += compat/glibc_compat.cpp
 endif
 
-libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
+libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LIBS) -no-undefined $(RELDFLAGS)
 libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1)
-libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
+libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(BOOST_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
 libbitcoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 endif
@@ -477,7 +500,6 @@ clean-local:
 	-$(MAKE) -C secp256k1 clean
 	-$(MAKE) -C univalue clean
 	-rm -f leveldb/*/*.gcda leveldb/*/*.gcno leveldb/helpers/memenv/*.gcda leveldb/helpers/memenv/*.gcno
-	-rm -f config.h
 	-rm -rf test/__pycache__
 
 .rc.o:

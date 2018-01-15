@@ -17,6 +17,7 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "compat/sanity.h"
+#include "config.h"
 #include "connmgr.h"
 #include "consensus/validation.h"
 #include "dosman.h"
@@ -581,10 +582,11 @@ void InitParameterInteraction()
 
 void InitLogging()
 {
-    fPrintToConsole = GetBoolArg("-printtoconsole", false);
+    fPrintToConsole = GetBoolArg("-printtoconsole", DEFAULT_PRINTTOCONSOLE);
     fLogTimestamps = GetBoolArg("-logtimestamps", DEFAULT_LOGTIMESTAMPS);
     fLogTimeMicros = GetBoolArg("-logtimemicros", DEFAULT_LOGTIMEMICROS);
     fLogIPs = GetBoolArg("-logips", DEFAULT_LOGIPS);
+    Logging::LogInit();
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("Bitcoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
@@ -593,7 +595,7 @@ void InitLogging()
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
+bool AppInit2(Config &config, boost::thread_group &threadGroup, CScheduler &scheduler)
 {
 // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -812,11 +814,11 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // Option to startup with mocktime set (used for regression testing):
     SetMockTime(GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
 
-    if (GetBoolArg("-peerbloomfilters", true))
+    if (GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices |= NODE_BLOOM;
 
     // BUIP010 Xtreme Thinblocks: begin section Initialize XTHIN service
-    if (GetBoolArg("-use-thinblocks", true))
+    if (GetBoolArg("-use-thinblocks", DEFAULT_USE_THINBLOCKS))
         nLocalServices |= NODE_XTHIN;
 // BUIP010 Xtreme Thinblocks: end section
 
@@ -924,7 +926,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
 #endif // ENABLE_WALLET
     // ********************************************************* Step 6: load block chain
 
-    fReindex = GetBoolArg("-reindex", false);
+    fReindex = GetBoolArg("-reindex", DEFAULT_REINDEX);
 
     // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/
     fs::path blocksDir = GetDataDir() / "blocks";
@@ -1132,7 +1134,13 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     fFeeEstimatesInitialized = true;
 
 // ********************************************************* Step 7: load wallet
+
 #ifdef ENABLE_WALLET
+
+    // Encoded addresses using cashaddr instead of base58
+    // Activates by default on Jan, 14
+    config.SetCashAddrEncoding(GetBoolArg("-usecashaddr", GetAdjustedTime() > 1515900000));
+
     if (fDisableWallet)
     {
         pwalletMain = NULL;
@@ -1284,7 +1292,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
 
     // see Step 2: parameter interactions for more information about these
     fListen = GetBoolArg("-listen", DEFAULT_LISTEN);
-    fDiscover = GetBoolArg("-discover", true);
+    fDiscover = GetBoolArg("-discover", DEFAULT_DISCOVER);
     fNameLookup = GetBoolArg("-dns", DEFAULT_NAME_LOOKUP);
 
     bool fBound = false;
@@ -1389,9 +1397,9 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // ********************************************************* Step 12: finished
 
     SetRPCWarmupFinished();
-    uiInterface.InitMessage(_("Done loading"));
 
 #ifdef ENABLE_WALLET
+    uiInterface.InitMessage(_("Reaccepting Wallet Transactions"));
     if (pwalletMain)
     {
         // Add wallet transactions that aren't already in a block to mapTransactions
@@ -1402,5 +1410,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     }
 #endif
 
+    uiInterface.InitMessage(_("Done loading"));
     return !fRequestShutdown;
 }

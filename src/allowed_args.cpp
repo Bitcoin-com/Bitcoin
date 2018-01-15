@@ -439,7 +439,9 @@ static void addWalletOptions(AllowedArgs &allowedArgs)
             _("Delete all wallet transactions and only recover those parts of the blockchain through -rescan on "
               "startup") +
                 " " +
-                _("(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)"));
+                _("(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)"))
+        .addArg("usecashaddr", optionalBool,
+            _("Use Bitcoin Cash Address for destination encoding (Activates by default Jan 14, 2017)"));
 #endif
 }
 
@@ -510,15 +512,10 @@ static void addDebuggingOptions(AllowedArgs &allowedArgs, HelpMessageMode mode)
             strprintf(_("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
                 _("If <category> is not supplied or if <category> = 1, output all debugging information.") +
                 _("<category> can be:") + " " + debugCategories + ".")
-        .addArg("flextrans", optionalBool, "Accept and relay transactions of version 4")
-        .addArg("ft-strict", optionalBool,
-            "On incoming FlexTrans transactions reject tx that have not specified tokens. default: false")
         .addArg("gen", optionalBool, strprintf(_("Generate coins (default: %u)"), DEFAULT_GENERATE))
         .addArg("genproclimit=<n>", requiredInt,
             strprintf(_("Set the number of threads for coin generation if enabled (-1 = all cores, default: %d)"),
                     DEFAULT_GENERATE_THREADS))
-        .addArg("gencoinbase=<pubkey>", requiredStr,
-            "When generating coins a coinbase has to be provided in the form of a public key")
         .addArg(
             "logips", optionalBool, strprintf(_("Include IP addresses in debug output (default: %u)"), DEFAULT_LOGIPS))
         .addArg("logtimestamps", optionalBool,

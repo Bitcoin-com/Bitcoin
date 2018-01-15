@@ -27,7 +27,6 @@
 enum
 {
     TYPICAL_BLOCK_SIZE = 200000, // used for initial buffer size
-    DEFAULT_MAX_GENERATED_BLOCK_SIZE = 1000000, // default for the maximum size of mined blocks
     DEFAULT_EXCESSIVE_ACCEPT_DEPTH = 12, // Default is 12 to make it very expensive for a minority hash power to get
     // lucky, and potentially drive a block that the rest of the network sees as
     // "excessive" onto the blockchain.
@@ -60,6 +59,22 @@ struct CDiskBlockPos;
 class CNode;
 class CNodeRef;
 class CChainParams;
+
+/** Add or remove a string to indicate ongoing status */
+class CStatusString
+{
+    mutable CCriticalSection cs;
+    std::set<std::string> strSet;
+
+public:
+    void Set(const std::string &yourStatus);
+    void Clear(const std::string &yourStatus);
+
+    std::string GetPrintable() const;
+};
+
+extern CStatusString statusStrings;
+
 
 extern uint256 bitcoinCashForkBlockHash;
 
@@ -192,14 +207,14 @@ extern UniValue getstructuresizes(const UniValue &params, bool fHelp);
 
 // RPC Set a node to receive expedited blocks from
 UniValue expedited(const UniValue &params, bool fHelp);
-
+// RPC display all variant forms of an address
+UniValue getaddressforms(const UniValue &params, bool fHelp);
 // These variables for traffic shaping need to be globally scoped so the GUI and CLI can adjust the parameters
 extern CLeakyBucket receiveShaper;
 extern CLeakyBucket sendShaper;
 
 // Test to determine if traffic shaping is enabled
 extern bool IsTrafficShapingEnabled();
-
 
 // Check whether we are doing an initial block download (synchronizing from disk or network)
 extern bool IsInitialBlockDownload();

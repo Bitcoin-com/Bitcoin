@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "unlimited.h"
+#include "base58.h"
+#include "cashaddrenc.h"
 #include "chain.h"
 #include "chainparams.h"
 #include "checkpoints.h"
@@ -13,6 +15,7 @@
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "dosman.h"
+#include "dstencode.h"
 #include "expedited.h"
 #include "hash.h"
 #include "leakybucket.h"
@@ -63,7 +66,7 @@ UniValue validatechainhistory(const UniValue &params, bool fHelp);
 bool MiningAndExcessiveBlockValidatorRule(const uint64_t newExcessiveBlockSize, const uint64_t newMiningBlockSize)
 {
     // The mined block size must be less then or equal too the excessive block size.
-    LogPrintf("newMiningBlockSizei: %d - newExcessiveBlockSize: %d", newMiningBlockSize, newExcessiveBlockSize);
+    LogPrintf("newMiningBlockSize: %d - newExcessiveBlockSize: %d\n", newMiningBlockSize, newExcessiveBlockSize);
     return (newMiningBlockSize <= newExcessiveBlockSize);
 }
 
@@ -1230,17 +1233,21 @@ void IsInitialBlockDownloadInit()
         fIsInitialBlockDownload.store(true);
         return;
     }
-    static bool lockIBDState = false;
-    if (lockIBDState)
+
+    // Using fInitialSyncComplete, once the chain is caught up the first time, and if we fall behind again due to a
+    // large re-org or for lack of mined blocks, then we continue to return false for IsInitialBlockDownload().
+    static bool fInitialSyncComplete = false;
+    if (fInitialSyncComplete)
     {
         fIsInitialBlockDownload.store(false);
         return;
     }
+
     bool state =
         (chainActive.Height() < pindexBestHeader->nHeight - 24 * 6 ||
             std::max(chainActive.Tip()->GetBlockTime(), pindexBestHeader->GetBlockTime()) < GetTime() - nMaxTipAge);
     if (!state)
-        lockIBDState = true;
+        fInitialSyncComplete = true;
     fIsInitialBlockDownload.store(state);
     return;
 }
@@ -1503,6 +1510,81 @@ UniValue getstat(const UniValue &params, bool fHelp)
     return ret;
 }
 
+UniValue setlog(const UniValue &params, bool fHelp)
+{
+    // Uses internal log functions
+    // Logging::
+    // Don't use them in other places.
+
+    UniValue ret = UniValue("");
+    uint64_t catg = Logging::NONE;
+    int nparm = params.size();
+    bool action = false;
+
+    if (fHelp || nparm < 1 || nparm > 2)
+    {
+        throw runtime_error(
+            "log \"category|all\" \"on|off\""
+            "\nTurn categories on or off\n"
+            "\nArguments:\n"
+            "1. \"category|all\" (string, required) Category or all categories\n"
+            "2. \"on\"           (string, optional) Turn a category, or all categories, on\n"
+            "2. \"off\"          (string, optional) Turn a category, or all categories, off\n"
+            "2.                (string, optional) No argument. Show a category, or all categories, state: on|off\n" +
+            HelpExampleCli("log", "\"NET\" on") + HelpExampleCli("log", "\"all\" off") +
+            HelpExampleCli("log", "\"tor\" ") + HelpExampleCli("log", "\"ALL\" "));
+    }
+
+    // LOGA("LOG: Before mask: 0x%llx\n", Logging::categoriesEnabled);
+
+    try
+    {
+        if (nparm > 0)
+        {
+            std::string category;
+            std::string data = params[0].get_str();
+            std::transform(data.begin(), data.end(), std::back_inserter(category), ::toupper);
+            catg = Logging::LogFindCategory(category);
+            if (catg == Logging::NONE)
+                return UniValue("Category not found: " + params[0].get_str()); // quit
+        }
+
+        switch (nparm)
+        {
+        case 1:
+            if (catg == Logging::ALL)
+                ret = UniValue(Logging::LogGetAllString());
+            else
+                ret = UniValue(Logging::LogAcceptCategory(catg) ? "on" : "off");
+            break;
+
+        case 2:
+            try
+            {
+                action = IsStringTrue(params[1].get_str());
+            }
+            catch (...)
+            {
+                ret = UniValue("Please pass on|off as last argument.");
+                break; // quit
+            }
+
+            Logging::LogToggleCategory(catg, action);
+
+        default:
+            break;
+        }
+    }
+    catch (...)
+    {
+        LOG(ALL, "LOG: Something went wrong in setlog function \n");
+        ret = UniValue("Something went wrong. That is all we know.");
+    }
+
+    // LOGA("LOG: After  mask: 0x%llx\n", Logging::categoriesEnabled);
+
+    return ret;
+}
 /* clang-format off */
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
@@ -1533,7 +1615,8 @@ static const CRPCCommand commands[] =
 #ifdef DEBUG
     { "util",               "getstructuresizes",      &getstructuresizes,      true  },  // BU
 #endif
-
+    { "util",               "getaddressforms",        &getaddressforms,        true  },
+    { "util",               "log",                    &setlog,                 true  },
     /* Coin generation */
     { "generating",         "getgenerate",            &getgenerate,            true  },
     { "generating",         "setgenerate",            &setgenerate,            true  },
@@ -1858,4 +1941,70 @@ void MarkAllContainingChainsInvalid(CBlockIndex *invalidBlock)
 
     if (dirty)
         FlushStateToDisk();
+}
+
+UniValue getaddressforms(const UniValue &params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 1)
+        throw runtime_error("getaddressforms \"address\"\n"
+                            "\nReturns all ways of displaying this address.\n"
+                            "\nArguments\n"
+                            "1. \"address\"    (string, required) the address\n"
+                            "\nResult:\n"
+                            "{\n"
+                            "\"legacy\": \"1 or 3 prefixed address\",\n"
+                            "\"bitcoincash\": \"bitcoincash prefixed address\",\n"
+                            "\"bitpay\": \"C or H prefixed address\"\n"
+                            "}\n"
+                            "\nExamples:\n" +
+                            HelpExampleCli("getaddressforms", "\"address\"") +
+                            HelpExampleRpc("getaddressforms", "\"address\""));
+
+    UniValue ret(UniValue::VARR);
+    CBlock block;
+
+    CTxDestination dest = DecodeDestination(params[0].get_str());
+
+    if (!IsValidDestination(dest))
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address or script");
+    }
+
+    std::string cashAddr = EncodeCashAddr(dest, Params());
+    std::string legacyAddr = EncodeLegacyAddr(dest, Params());
+    std::string bitpayAddr = EncodeBitpayAddr(dest, Params());
+
+    UniValue node(UniValue::VOBJ);
+    node.push_back(Pair("legacy", legacyAddr));
+    node.push_back(Pair("bitcoincash", cashAddr));
+    node.push_back(Pair("bitpay", bitpayAddr));
+    return node;
+}
+
+std::string CStatusString::GetPrintable() const
+{
+    LOCK(cs);
+    if (strSet.empty())
+        return "ready";
+    std::string ret;
+    for (auto it : strSet)
+    {
+        if (!ret.empty())
+            ret.append(" ");
+        std::string &s = it;
+        ret.append(s);
+    }
+    return ret;
+}
+
+void CStatusString::Set(const std::string &yourStatus)
+{
+    LOCK(cs);
+    strSet.insert(yourStatus);
+}
+
+void CStatusString::Clear(const std::string &yourStatus)
+{
+    LOCK(cs);
+    strSet.erase(yourStatus);
 }

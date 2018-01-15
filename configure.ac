@@ -10,8 +10,8 @@ esac
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
 AC_PREREQ([2.60])
 define(_CLIENT_VERSION_MAJOR, 1)
-define(_CLIENT_VERSION_MINOR, 1)
-define(_CLIENT_VERSION_REVISION, 2)
+define(_CLIENT_VERSION_MINOR, 2)
+define(_CLIENT_VERSION_REVISION, 0)
 define(_CLIENT_VERSION_BUILD, 0)  # version 99 here indicates an unreleased version
 define(_CLIENT_VERSION_IS_RELEASE, true)
 define(_COPYRIGHT_YEAR, 2017)
@@ -174,6 +174,18 @@ AC_ARG_ENABLE([gperf],
   [enable gperftools testing (default is no)])],
   [use_gperf=yes],
   [use_gperf=no])
+
+AC_ARG_ENABLE([gprof],
+  [AS_HELP_STRING([--enable-gprof],
+  [enable gnu profiler build (default is no)])],
+  [use_gprof=yes],
+  [use_gprof=no])
+
+AC_ARG_ENABLE([mutrace],
+  [AS_HELP_STRING([--enable-mutrace],
+  [enable mutex profiler build (default is no)])],
+  [use_mutrace=yes],
+  [use_mutrace=no])
 
 AC_ARG_ENABLE([glibc-back-compat],
   [AS_HELP_STRING([--enable-glibc-back-compat],
@@ -426,6 +438,12 @@ case $host in
      if test "x$use_gperf" = "xyes"; then
        AC_CHECK_LIB([tcmalloc],      [malloc],, AC_MSG_ERROR(tcmalloc lib missing))
        AC_DEFINE([ENABLE_GPERF],[1],[Define to 1 to enable GPERF])
+     fi
+     if test "x$use_gprof" = "xyes"; then
+       AC_DEFINE([ENABLE_GPROF],[1],[Define to 1 to enable profiling])
+     fi
+     if test "x$use_mutrace" = "xyes"; then
+       AC_DEFINE([ENABLE_MUTRACE],[1],[Define to 1 to enable mutex tracing])
      fi
      ;;
    *dragonfly*)
@@ -1036,6 +1054,8 @@ AM_CONDITIONAL([ENABLE_BENCH],[test x$use_bench = xyes])
 AM_CONDITIONAL([USE_QRCODE], [test x$use_qr = xyes])
 AM_CONDITIONAL([USE_LCOV],[test x$use_lcov = xyes])
 AM_CONDITIONAL([ENABLE_GPERF],[test x$use_gperf = xyes])
+AM_CONDITIONAL([ENABLE_GPROF],[test x$use_gprof = xyes])
+AM_CONDITIONAL([ENABLE_MUTRACE],[test x$use_mutrace = xyes])
 AM_CONDITIONAL([GLIBC_BACK_COMPAT],[test x$use_glibc_compat = xyes])
 AM_CONDITIONAL([HARDEN],[test x$use_hardening = xyes])
 AM_CONDITIONAL([ENABLE_HWCRC32],[test x$enable_hwcrc32 = xyes])

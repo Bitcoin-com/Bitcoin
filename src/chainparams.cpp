@@ -118,7 +118,7 @@ public:
 
 #ifdef BITCOIN_CASH
         // Nov, 13 hard fork
-        consensus.cashHardForkActivationTime = 1510600000;
+        consensus.daaHeight = 504031;
 #endif
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -172,6 +172,7 @@ public:
             boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] =
             boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
+        cashaddrPrefix = "bitcoincash";
 
         // BITCOINUNLIMITED START
         vFixedSeeds = std::vector<SeedSpec6>();
@@ -197,11 +198,23 @@ public:
                 225430, uint256S("0x00000000000001c108384350f74090433e7fcf79a606b8e797f065b130575932"))(
                 250000, uint256S("0x000000000000003887df1f29024b06fc2200b55f8af8f35453d7be294df2d214"))(
                 279000, uint256S("0x0000000000000001ae8c72a0b0c301f67e3afca10e819efa9041e458e9bd7e40"))(
+#ifdef BITCOIN_CASH
+                295000, uint256S("0x00000000000000004d9b4ef50f0f9d686fd69db2e03af35a100370c64632a983"))(
+                // August 1st 2017 CASH fork (UAHF)
+                478559, uint256S("0x000000000000000000651ef99cb9fcbe0dadde1d424bd9f15ff20136191a5eec"))(
+                // November 13th 2017 new DAA fork
+                504031, uint256S("0x0000000000000000011ebf65b60d0a3de80b8175be709d653b4c1a1beeb6ab9c")),
+            1483472411, // * UNIX timestamp of last checkpoint block
+            184495391, // * total number of transactions between genesis and last checkpoint
+            //   (the tx=... number in the SetBestChain debug.log lines)
+            280000.0 // * estimated number of transactions per day after checkpoint (~3.5 TPS)
+#else
                 295000, uint256S("0x00000000000000004d9b4ef50f0f9d686fd69db2e03af35a100370c64632a983")),
             1397080064, // * UNIX timestamp of last checkpoint block
             36544669, // * total number of transactions between genesis and last checkpoint
             //   (the tx=... number in the SetBestChain debug.log lines)
             60000.0 // * estimated number of transactions per day after checkpoint
+#endif
         };
     }
 };
@@ -251,7 +264,7 @@ public:
 
 #ifdef BITCOIN_CASH
         // Nov, 13 hard fork
-        consensus.cashHardForkActivationTime = 1510600000;
+        consensus.daaHeight = 0;
 #endif
 
         vFixedSeeds.clear();
@@ -265,6 +278,7 @@ public:
             boost::assign::list_of(0x42)(0x69)(0x67)(0x20).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] =
             boost::assign::list_of(0x42)(0x6c)(0x6b)(0x73).convert_to_container<std::vector<unsigned char> >();
+        cashaddrPrefix = "bchnol";
 
         vFixedSeeds = std::vector<SeedSpec6>();
 
@@ -315,7 +329,7 @@ public:
 
 #ifdef BITCOIN_CASH
         // Nov, 13 hard fork
-        consensus.cashHardForkActivationTime = 1510600000;
+        consensus.daaHeight = 1188697;
 #endif
         pchMessageStart[0] = 0x0b;
         pchMessageStart[1] = 0x11;
@@ -337,18 +351,19 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        // nodes with support for servicebits filtering should be at the top
+// nodes with support for servicebits filtering should be at the top
+
 #ifdef BITCOIN_CASH
         // Bitcoin ABC seeder
         vSeeds.push_back(CDNSSeedData("bitcoinabc.org", "testnet-seed.bitcoinabc.org", true));
         // bitcoinforks seeders
-        vSeeds.push_back(CDNSSeedData( "bitcoinforks.org", "testnet-seed-abc.bitcoinforks.org", true));
+        vSeeds.push_back(CDNSSeedData("bitcoinforks.org", "testnet-seed-abc.bitcoinforks.org", true));
         // BU seeder
         vSeeds.push_back(CDNSSeedData("bitcoinunlimited.info", "testnet-seed.bitcoinunlimited.info", true));
         // Bitprim
-        vSeeds.push_back( CDNSSeedData("bitprim.org", "testnet-seed.bitprim.org", true));
+        vSeeds.push_back(CDNSSeedData("bitprim.org", "testnet-seed.bitprim.org", true));
         // Amaury SÉCHET
-        vSeeds.push_back( CDNSSeedData("deadalnix.me", "testnet-seed.deadalnix.me", true));
+        vSeeds.push_back(CDNSSeedData("deadalnix.me", "testnet-seed.deadalnix.me", true));
         // criptolayer.net
         vSeeds.push_back(CDNSSeedData("criptolayer.net", "testnet-seeder.criptolayer.net", true));
 #else
@@ -359,13 +374,13 @@ public:
         vSeeds.push_back(CDNSSeedData("bitcoin.schildbach.de", "testnet-seed.bitcoin.schildbach.de"));
 #endif
 
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 111);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 196);
-        base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 239);
-        base58Prefixes[EXT_PUBLIC_KEY] =
-            boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
-        base58Prefixes[EXT_SECRET_KEY] =
-            boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<uint8_t>(1, 111);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<uint8_t>(1, 196);
+        base58Prefixes[SECRET_KEY] = std::vector<uint8_t>(1, 239);
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+
+        cashaddrPrefix = "bchtest";
 
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_test, pnSeed6_test + ARRAYLEN(pnSeed6_test));
 
@@ -376,9 +391,9 @@ public:
         fTestnetToBeDeprecatedFieldRPC = true;
 
         checkpointData =
-            (CCheckpointData){boost::assign::map_list_of(
-                                  546, uint256S("000000002a936ca763904c3c35fce2f3556c559c0214345d31b1bcebf76acb70"))(
-                                  1155876, uint256S("00000000000e38fef93ed9582a7df43815d5c2ba9fd37ef70c9a0ea4a285b8f5")),
+            (CCheckpointData){boost::assign::map_list_of(546,
+                                  uint256S("000000002a936ca763904c3c35fce2f3556c559c0214345d31b1bcebf76acb70"))(1155876,
+                                  uint256S("00000000000e38fef93ed9582a7df43815d5c2ba9fd37ef70c9a0ea4a285b8f5")),
                 1501616524, 1488, 300};
     }
 };
@@ -415,7 +430,7 @@ public:
 
 #ifdef BITCOIN_CASH
         // Nov, 13 hard fork is always on on regtest.
-        consensus.cashHardForkActivationTime = 0;
+        consensus.daaHeight = 0;
 #endif
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
@@ -447,13 +462,12 @@ public:
         checkpointData = (CCheckpointData){
             boost::assign::map_list_of(0, uint256S("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206")),
             0, 0, 0};
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 111);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 196);
-        base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 239);
-        base58Prefixes[EXT_PUBLIC_KEY] =
-            boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
-        base58Prefixes[EXT_SECRET_KEY] =
-            boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<uint8_t>(1, 111);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<uint8_t>(1, 196);
+        base58Prefixes[SECRET_KEY] = std::vector<uint8_t>(1, 239);
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+        cashaddrPrefix = "bchreg";
     }
 };
 static CRegTestParams regTestParams;
